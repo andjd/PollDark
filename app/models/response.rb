@@ -1,6 +1,6 @@
 class Response < ActiveRecord::Base
   validates :user_id, :answer_id, presence: true
-  validate :respondent_has_not_already_answered_question?
+#  validate :respondent_has_not_already_answered_question?
   validate :respondent_did_not_author_poll?
 
   belongs_to(
@@ -37,8 +37,11 @@ class Response < ActiveRecord::Base
   end
 
   def sibling_responses
+    current_user_id = self.user_id
     current_id = self.id.nil? ? -1 : self.id
-    self.question.responses.where("responses.id != ?", current_id)
+    Response.joins(:answer_choice => :question)
+      .where("responses.user_id = ?", current_user_id)
+      .where("responses.id != ?", current_id)
 
   end
 
