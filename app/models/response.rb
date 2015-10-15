@@ -1,7 +1,7 @@
 class Response < ActiveRecord::Base
   validates :user_id, :answer_id, presence: true
-  validates :respondent_has_not_already_answered_question?
-  validates :respondent_did_not_author_poll?
+  validate :respondent_has_not_already_answered_question?
+  validate :respondent_did_not_author_poll?
 
   belongs_to(
     :respondent,
@@ -31,7 +31,9 @@ class Response < ActiveRecord::Base
 
 
   def respondent_has_not_already_answered_question?
-    sibling_responses.where("user_id = ?", (self.user_id)).empty?
+    if sibling_responses.where("user_id = ?", (self.user_id)).empty?
+      errors[:respondent] << 'user cannot vote twice'
+    end
   end
 
   def sibling_responses
@@ -41,7 +43,12 @@ class Response < ActiveRecord::Base
   end
 
   def respondent_did_not_author_poll?
-    self.poll.author_id != self.user_id
+    unless Response.joins(:question, :poll)
+      .where('author_id = ? AND questions.id = ?', self.user_id, self.question.id)
+      .empty?
+
+      errors[:respondent] << "author cannot vote on their own poll"
+    end
   end
 
 
